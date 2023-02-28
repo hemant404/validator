@@ -81,12 +81,12 @@ type Validate struct {
 	hasCustomFuncs   bool
 	hasTagNameFunc   bool
 	tagNameFunc      TagNameFunc
-	structLevelFuncs map[reflect.Type]StructLevelFuncCtx
-	customFuncs      map[reflect.Type]CustomTypeFunc
-	aliases          map[string]string
+	structLevelFuncs sync.Map //map[reflect.Type]StructLevelFuncCtx
+	customFuncs      sync.Map //map[reflect.Type]CustomTypeFunc
+	aliases          sync.Map //map[string]string
 	validations      sync.Map
-	transTagFunc     map[ut.Translator]map[string]TranslationFunc // map[<locale>]map[<tag>]TranslationFunc
-	rules            map[reflect.Type]map[string]string
+	transTagFunc     sync.Map //map[ut.Translator]map[string]TranslationFunc // map[<locale>]map[<tag>]TranslationFunc
+	rules            sync.Map //map[reflect.Type]map[string]string
 	tagCache         *tagCache
 	structCache      *structCache
 }
@@ -105,11 +105,15 @@ func New() *Validate {
 	sc.m.Store(make(map[reflect.Type]*cStruct))
 
 	v := &Validate{
-		tagName:     defaultTagName,
-		aliases:     make(map[string]string, len(bakedInAliases)),
-		validations: sync.Map{},
-		tagCache:    tc,
-		structCache: sc,
+		tagName:          defaultTagName,
+		aliases:          sync.Map{},
+		validations:      sync.Map{},
+		structLevelFuncs: sync.Map{},
+		customFuncs:      sync.Map{},
+		transTagFunc:     sync.Map{},
+		rules:            sync.Map{},
+		tagCache:         tc,
+		structCache:      sc,
 	}
 
 	// must copy alias validators for separate validations to be used in each validator instance
@@ -253,7 +257,7 @@ func (v *Validate) RegisterAlias(alias, tags string) {
 		panic(fmt.Sprintf(restrictedAliasErr, alias))
 	}
 
-	v.aliases[alias] = tags
+	v.aliases.Store(alias, tags)
 }
 
 // RegisterStructValidation registers a StructLevelFunc against a number of types.
@@ -271,17 +275,13 @@ func (v *Validate) RegisterStructValidation(fn StructLevelFunc, types ...interfa
 // - this method is not thread-safe it is intended that these all be registered prior to any validation
 func (v *Validate) RegisterStructValidationCtx(fn StructLevelFuncCtx, types ...interface{}) {
 
-	if v.structLevelFuncs == nil {
-		v.structLevelFuncs = make(map[reflect.Type]StructLevelFuncCtx)
-	}
-
 	for _, t := range types {
 		tv := reflect.ValueOf(t)
 		if tv.Kind() == reflect.Ptr {
 			t = reflect.Indirect(tv).Interface()
 		}
 
-		v.structLevelFuncs[reflect.TypeOf(t)] = fn
+		v.structLevelFuncs.Store(reflect.TypeOf(t), fn)
 	}
 }
 
@@ -290,10 +290,6 @@ func (v *Validate) RegisterStructValidationCtx(fn StructLevelFuncCtx, types ...i
 //
 // NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation
 func (v *Validate) RegisterStructValidationMapRules(rules map[string]string, types ...interface{}) {
-	if v.rules == nil {
-		v.rules = make(map[reflect.Type]map[string]string)
-	}
-
 	deepCopyRules := make(map[string]string)
 	for i, rule := range rules {
 		deepCopyRules[i] = rule
@@ -309,7 +305,7 @@ func (v *Validate) RegisterStructValidationMapRules(rules map[string]string, typ
 		if typ.Kind() != reflect.Struct {
 			continue
 		}
-		v.rules[typ] = deepCopyRules
+		v.rules.Store(typ, deepCopyRules)
 	}
 }
 
@@ -318,12 +314,8 @@ func (v *Validate) RegisterStructValidationMapRules(rules map[string]string, typ
 // NOTE: this method is not thread-safe it is intended that these all be registered prior to any validation
 func (v *Validate) RegisterCustomTypeFunc(fn CustomTypeFunc, types ...interface{}) {
 
-	if v.customFuncs == nil {
-		v.customFuncs = make(map[reflect.Type]CustomTypeFunc)
-	}
-
 	for _, t := range types {
-		v.customFuncs[reflect.TypeOf(t)] = fn
+		v.customFuncs.Store(reflect.TypeOf(t), fn)
 	}
 
 	v.hasCustomFuncs = true
@@ -332,21 +324,19 @@ func (v *Validate) RegisterCustomTypeFunc(fn CustomTypeFunc, types ...interface{
 // RegisterTranslation registers translations against the provided tag.
 func (v *Validate) RegisterTranslation(tag string, trans ut.Translator, registerFn RegisterTranslationsFunc, translationFn TranslationFunc) (err error) {
 
-	if v.transTagFunc == nil {
-		v.transTagFunc = make(map[ut.Translator]map[string]TranslationFunc)
-	}
-
 	if err = registerFn(trans); err != nil {
 		return
 	}
 
-	m, ok := v.transTagFunc[trans]
+	m, ok := v.transTagFunc.Load(trans)
 	if !ok {
-		m = make(map[string]TranslationFunc)
-		v.transTagFunc[trans] = m
+		m = sync.Map{}
+		v.transTagFunc.Store(trans, m)
 	}
-
-	m[tag] = translationFn
+	if m != nil {
+		a := m.(sync.Map)
+		a.Store(tag, translationFn)
+	}
 
 	return
 }
