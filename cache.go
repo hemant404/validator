@@ -120,7 +120,7 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 	var fld reflect.StructField
 	var tag string
 	var customName string
-	
+
 	for i := 0; i < numFields; i++ {
 
 		fld = typ.Field(i)
@@ -287,9 +287,9 @@ func (v *Validate) parseFieldTagsRecursive(tag string, fieldName string, alias s
 					panic(strings.TrimSpace(fmt.Sprintf(invalidValidation, fieldName)))
 				}
 
-				if wrapper, ok := v.validations[current.tag]; ok {
-					current.fn = wrapper.fn
-					current.runValidationWhenNil = wrapper.runValidatinOnNil
+				if wrapper, ok := v.validations.Load(current.tag); ok {
+					current.fn = wrapper.(internalValidationFuncWrapper).fn
+					current.runValidationWhenNil = wrapper.(internalValidationFuncWrapper).runValidatinOnNil
 				} else {
 					panic(strings.TrimSpace(fmt.Sprintf(undefinedValidation, current.tag, fieldName)))
 				}

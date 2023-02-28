@@ -84,7 +84,7 @@ type Validate struct {
 	structLevelFuncs map[reflect.Type]StructLevelFuncCtx
 	customFuncs      map[reflect.Type]CustomTypeFunc
 	aliases          map[string]string
-	validations      map[string]internalValidationFuncWrapper
+	validations      sync.Map
 	transTagFunc     map[ut.Translator]map[string]TranslationFunc // map[<locale>]map[<tag>]TranslationFunc
 	rules            map[reflect.Type]map[string]string
 	tagCache         *tagCache
@@ -107,7 +107,7 @@ func New() *Validate {
 	v := &Validate{
 		tagName:     defaultTagName,
 		aliases:     make(map[string]string, len(bakedInAliases)),
-		validations: make(map[string]internalValidationFuncWrapper, len(bakedInValidators)),
+		validations: sync.Map{},
 		tagCache:    tc,
 		structCache: sc,
 	}
@@ -235,7 +235,8 @@ func (v *Validate) registerValidation(tag string, fn FuncCtx, bakedIn bool, nilC
 	if !bakedIn && (ok || strings.ContainsAny(tag, restrictedTagChars)) {
 		panic(fmt.Sprintf(restrictedTagErr, tag))
 	}
-	v.validations[tag] = internalValidationFuncWrapper{fn: fn, runValidatinOnNil: nilCheckable}
+	v.validations.Store(tag, internalValidationFuncWrapper{fn: fn, runValidatinOnNil: nilCheckable})
+	//v.validations[tag] = internalValidationFuncWrapper{fn: fn, runValidatinOnNil: nilCheckable}
 	return nil
 }
 
