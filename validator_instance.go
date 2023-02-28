@@ -336,6 +336,7 @@ func (v *Validate) RegisterTranslation(tag string, trans ut.Translator, register
 	if m != nil {
 		a := m.(sync.Map)
 		a.Store(tag, translationFn)
+		fmt.Println(a.Load(tag))
 	}
 
 	return
