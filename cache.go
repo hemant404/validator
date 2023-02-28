@@ -122,7 +122,7 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 	var fld reflect.StructField
 	var tag string
 	var customName string
-	rq := rules.(*sync.Map)
+	rq := rules.(sync.Map)
 	for i := 0; i < numFields; i++ {
 
 		fld = typ.Field(i)
