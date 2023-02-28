@@ -8,7 +8,7 @@ import (
 	"github.com/go-playground/locales/pt"
 	ut "github.com/go-playground/universal-translator"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/hemant404/validator"
 )
 
 func TestTranslations(t *testing.T) {

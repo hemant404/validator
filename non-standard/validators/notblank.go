@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/hemant404/validator"
 )
 
 // NotBlank is the validation function for validating if the current field
