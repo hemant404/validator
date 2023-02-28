@@ -337,7 +337,7 @@ func (v *Validate) RegisterTranslation(tag string, trans ut.Translator, register
 		a := m.(sync.Map)
 		a.Store(tag, translationFn)
 		v1, k := a.Load(tag)
-		fmt.Println(v1.(ut.Translator), k)
+		fmt.Println(v1.(TranslationFunc), k)
 	}
 
 	return
