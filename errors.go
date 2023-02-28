@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	ut "github.com/go-playground/universal-translator"
 )
@@ -259,17 +260,17 @@ func (fe *fieldError) Error() string {
 //
 // NOTE: if no registered translation can be found, it returns the original
 // untranslated error message.
-func (fe *fieldError) Translate(ut ut.Translator) string {
+func (fe *fieldError) Translate(ut1 ut.Translator) string {
 
-	m, ok := fe.v.transTagFunc[ut]
+	m, ok := fe.v.transTagFunc.Load(ut1)
 	if !ok {
 		return fe.Error()
 	}
-
-	fn, ok := m[fe.tag]
+	a := m.(sync.Map)
+	fn, ok := a.Load(fe.tag)
 	if !ok {
 		return fe.Error()
 	}
-
-	return fn(ut, fe)
+	f := fn.(TranslationFunc)
+	return f(ut1, fe)
 }

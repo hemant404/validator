@@ -111,16 +111,18 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 		return cs
 	}
 
-	cs = &cStruct{name: sName, fields: make([]*cField, 0), fn: v.structLevelFuncs[typ]}
+	cs = &cStruct{name: sName, fields: make([]*cField, 0)}
+	f, _ := v.structLevelFuncs.Load(typ)
+	cs.fn = f.(StructLevelFuncCtx)
 
 	numFields := current.NumField()
-	rules := v.rules[typ]
+	rules, _ := v.rules.Load(typ)
 
 	var ctag *cTag
 	var fld reflect.StructField
 	var tag string
 	var customName string
-
+	rq := rules.(sync.Map)
 	for i := 0; i < numFields; i++ {
 
 		fld = typ.Field(i)
@@ -129,8 +131,8 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 			continue
 		}
 
-		if rtag, ok := rules[fld.Name]; ok {
-			tag = rtag
+		if rtag, ok := rq.Load(fld.Name); ok {
+			tag = rtag.(string)
 		} else {
 			tag = fld.Tag.Get(v.tagName)
 		}
@@ -183,11 +185,11 @@ func (v *Validate) parseFieldTagsRecursive(tag string, fieldName string, alias s
 		}
 
 		// check map for alias and process new tags, otherwise process as usual
-		if tagsVal, found := v.aliases[t]; found {
+		if tagsVal, found := v.aliases.Load(t); found {
 			if i == 0 {
-				firstCtag, current = v.parseFieldTagsRecursive(tagsVal, fieldName, t, true)
+				firstCtag, current = v.parseFieldTagsRecursive(tagsVal.(string), fieldName, t, true)
 			} else {
-				next, curr := v.parseFieldTagsRecursive(tagsVal, fieldName, t, true)
+				next, curr := v.parseFieldTagsRecursive(tagsVal.(string), fieldName, t, true)
 				current.next, current = next, curr
 
 			}

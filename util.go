@@ -43,8 +43,8 @@ BEGIN:
 
 		if v.v.hasCustomFuncs {
 
-			if fn, ok := v.v.customFuncs[current.Type()]; ok {
-				current = reflect.ValueOf(fn(current))
+			if fn, ok := v.v.customFuncs.Load(current.Type()); ok {
+				current = reflect.ValueOf(fn.(CustomTypeFunc)(current))
 				goto BEGIN
 			}
 		}
