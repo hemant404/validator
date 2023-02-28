@@ -3,11 +3,10 @@ package validator
 import (
 	"bytes"
 	"fmt"
+	ut "github.com/go-playground/universal-translator"
 	"reflect"
 	"strings"
 	"sync"
-
-	ut "github.com/go-playground/universal-translator"
 )
 
 const (
@@ -266,11 +265,13 @@ func (fe *fieldError) Translate(ut1 ut.Translator) string {
 	if !ok {
 		return fe.Error()
 	}
-	a := m.(sync.Map)
+	a := m.(*sync.Map)
 	fn, ok := a.Load(fe.tag)
+	fmt.Println(fn)
 	if !ok {
 		return fe.Error()
 	}
 	f := fn.(TranslationFunc)
+	fmt.Println(f)
 	return f(ut1, fe)
 }
