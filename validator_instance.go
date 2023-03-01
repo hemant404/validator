@@ -85,8 +85,8 @@ type Validate struct {
 	customFuncs      sync.Map //map[reflect.Type]CustomTypeFunc
 	aliases          sync.Map //map[string]string
 	validations      sync.Map
-	transTagFunc     sync.Map //map[ut.Translator]map[string]TranslationFunc // map[<locale>]map[<tag>]TranslationFunc
-	rules            sync.Map //map[reflect.Type]map[string]string
+	transTagFunc     *sync.Map //map[ut.Translator]map[string]TranslationFunc // map[<locale>]map[<tag>]TranslationFunc
+	rules            *sync.Map //map[reflect.Type]map[string]string
 	tagCache         *tagCache
 	structCache      *structCache
 }
@@ -110,8 +110,8 @@ func New() *Validate {
 		validations:      sync.Map{},
 		structLevelFuncs: sync.Map{},
 		customFuncs:      sync.Map{},
-		transTagFunc:     sync.Map{},
-		rules:            sync.Map{},
+		transTagFunc:     &sync.Map{},
+		rules:            &sync.Map{},
 		tagCache:         tc,
 		structCache:      sc,
 	}
@@ -330,14 +330,12 @@ func (v *Validate) RegisterTranslation(tag string, trans ut.Translator, register
 
 	m, ok := v.transTagFunc.Load(trans)
 	if !ok {
-		m = sync.Map{}
+		m = &sync.Map{}
 		v.transTagFunc.Store(trans, m)
 	}
 	if m != nil {
-		a := m.(sync.Map)
+		a := m.(*sync.Map)
 		a.Store(tag, translationFn)
-		v1, k := a.Load(tag)
-		fmt.Println(v1.(TranslationFunc), k)
 	}
 
 	return

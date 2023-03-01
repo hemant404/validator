@@ -113,7 +113,9 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 
 	cs = &cStruct{name: sName, fields: make([]*cField, 0)}
 	f, _ := v.structLevelFuncs.Load(typ)
-	cs.fn = f.(StructLevelFuncCtx)
+	if f != nil {
+		cs.fn = f.(StructLevelFuncCtx)
+	}
 
 	numFields := current.NumField()
 	rules, _ := v.rules.Load(typ)
@@ -122,7 +124,10 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 	var fld reflect.StructField
 	var tag string
 	var customName string
-	rq := rules.(sync.Map)
+	var rq map[string]string
+	if rules != nil {
+		rq = rules.(map[string]string)
+	}
 	for i := 0; i < numFields; i++ {
 
 		fld = typ.Field(i)
@@ -131,8 +136,8 @@ func (v *Validate) extractStructCache(current reflect.Value, sName string) *cStr
 			continue
 		}
 
-		if rtag, ok := rq.Load(fld.Name); ok {
-			tag = rtag.(string)
+		if rtag, ok := rq[fld.Name]; ok {
+			tag = rtag
 		} else {
 			tag = fld.Tag.Get(v.tagName)
 		}
